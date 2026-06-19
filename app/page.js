@@ -118,7 +118,7 @@ useEffect(() => {
   }, 4000);
 
   return () => clearInterval(interval);
-}, []);
+}, [slides.length]);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -182,7 +182,7 @@ useEffect(() => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
               </span>
-              Dubai Business Setup Experts
+              #1 Dubai Business Setup Experts
             </div>
             <h1 className="text-5xl md:text-[3rem] xl:text-[4rem] font-extrabold mb-6 leading-[1.1] tracking-tight">
               Launch Your <br />
@@ -633,7 +633,7 @@ useEffect(() => {
                   transition={{ duration: 0.3 }}
                 >
                   <GlassCard hoverEffect={false} className="p-10 border-teal-500/30 relative">
-                    <div className="text-6xl text-teal-500/20 absolute top-6 left-6 font-serif">"</div>
+                    <div className="text-6xl text-teal-500/20 absolute top-6 left-6 font-serif">&ldquo;</div>
                     <p className="text-xl text-slate-300 italic mb-8 relative z-10 leading-relaxed">
                       {testimonials[testiIndex].text}
                     </p>
