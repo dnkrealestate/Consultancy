@@ -139,7 +139,7 @@ export default function AboutPage() {
               </div>
               <h3 className="text-2xl font-bold text-white mb-4">Our Vision</h3>
               <p className="text-slate-400 leading-relaxed">
-                To be the UAE's most trusted business consultancy — recognised globally for integrity, efficiency, and long-term partnership with every client we serve.
+                To be the UAE&apos;s most trusted business consultancy — recognised globally for integrity, efficiency, and long-term partnership with every client we serve.
               </p>
             </GlassCard>
           </motion.div>
