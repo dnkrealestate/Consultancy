@@ -633,7 +633,7 @@ useEffect(() => {
                   transition={{ duration: 0.3 }}
                 >
                   <GlassCard hoverEffect={false} className="p-10 border-teal-500/30 relative">
-                    <div className="text-6xl text-teal-500/20 absolute top-6 left-6 font-serif">"</div>
+                    <div className="text-6xl text-teal-500/20 absolute top-6 left-6 font-serif">&ldquo;</div>
                     <p className="text-xl text-slate-300 italic mb-8 relative z-10 leading-relaxed">
                       {testimonials[testiIndex].text}
                     </p>
