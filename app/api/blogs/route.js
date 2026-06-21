@@ -57,7 +57,7 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error('[GET /api/blogs]', error);
-    return NextResponse.json({ error: 'Failed to fetch blogs' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch blogs', name: error?.name, reason: error?.message }, { status: 500 });
   }
 }
 
