@@ -8,10 +8,12 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata = {
   title: 'DNK Consultancy | Premium Business Setup in Dubai',
-  description: 'Launch your business in Dubai with zero stress. Expert company formation, Freezone and Mainland licenses, UAE Golden Visa, and corporate tax services.',
+  description:
+    'Launch your business in Dubai with zero stress. Expert company formation, Freezone and Mainland licenses, UAE Golden Visa, and corporate tax services.',
   openGraph: {
     title: 'DNK Consultancy | Premium Business Setup in Dubai',
-    description: 'Expert company formation, Freezone and Mainland licenses, UAE Golden Visa, and corporate tax services.',
+    description:
+      'Expert company formation, Freezone and Mainland licenses, UAE Golden Visa, and corporate tax services.',
     url: 'https://www.dnkconsultancy.com',
     siteName: 'DNK Consultancy',
     images: [
@@ -32,7 +34,7 @@ export const metadata = {
   robots: {
     index: true,
     follow: true,
-  }
+  },
 };
 
 export default function RootLayout({ children }) {
