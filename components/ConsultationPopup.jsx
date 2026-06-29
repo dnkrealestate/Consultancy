@@ -49,6 +49,7 @@ export default function ConsultationPopup({ isOpen, onClose }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   // ── Service selection (NEW — captured before step 1) ──────────────────────
   const [selectedService, setSelectedService] = useState('');
@@ -84,22 +85,25 @@ export default function ConsultationPopup({ isOpen, onClose }) {
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
+    setSubmitError('');
     try {
       const response = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
-          // ← service is now always included
           service: selectedService || 'General Consultation',
           status: 'new',
         }),
       });
       if (response.ok) {
         setIsSuccess(true);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setSubmitError(data.error || 'Something went wrong. Please try again.');
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
+      setSubmitError('Connection error. Please check your internet and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -114,6 +118,7 @@ export default function ConsultationPopup({ isOpen, onClose }) {
       setServiceStep(true);
       setSelectedService('');
       setIsSuccess(false);
+      setSubmitError('');
     }, 300);
   };
 
@@ -337,7 +342,13 @@ export default function ConsultationPopup({ isOpen, onClose }) {
                   </AnimatePresence>
 
                   {/* ── FOOTER CONTROLS ── */}
-                  <div className="mt-8 flex justify-between items-center pt-4 border-t border-white/5">
+                  {submitError && (
+                    <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                      <span className="mt-0.5 shrink-0">⚠</span>
+                      <span>{submitError}</span>
+                    </div>
+                  )}
+                  <div className="mt-4 flex justify-between items-center pt-4 border-t border-white/5">
                     <button
                       type="button"
                       onClick={() => currentStep === 1 ? setServiceStep(true) : setCurrentStep((p) => p - 1)}

@@ -26,7 +26,7 @@ export async function GET(request, { params }) {
   try {
     await dbConnect();
 
-    const { id } = params;
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const track = searchParams.get('track') === 'true';
 
@@ -64,7 +64,7 @@ export async function PUT(request, { params }) {
   try {
     await dbConnect();
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     // Strip protected fields
@@ -108,7 +108,7 @@ export async function DELETE(request, { params }) {
   try {
     await dbConnect();
 
-    const { id } = params;
+    const { id } = await params;
     const isObjectId = /^[a-f\d]{24}$/i.test(id);
     const query = isObjectId ? { _id: id } : { slug: id };
 

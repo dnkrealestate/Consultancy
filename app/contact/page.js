@@ -112,11 +112,11 @@ export default function Contact() {
               </div>
 
               <div>
-                <h3 className="text-3xl font-bold text-[#111827] mb-2">
+                <h3 className="text-[2rem] font-bold text-[#111827] mb-2">
                   {item.title}
                 </h3>
                 {item.info.map((line, i) => (
-                  <p key={i} className="text-[#374151] text-lg leading-relaxed">
+                  <p key={i} className="text-[#374151] text-[0.8rem]  md:text-[0.9rem] leading-relaxed">
                     {line}
                   </p>
                 ))}

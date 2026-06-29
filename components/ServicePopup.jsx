@@ -26,6 +26,7 @@ export default function ServicePopup({ isOpen, onClose, preselectedService }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const { register, handleSubmit, formState: { errors }, trigger, setValue, watch, reset } = useForm({
     resolver: zodResolver(schema),
@@ -52,6 +53,7 @@ export default function ServicePopup({ isOpen, onClose, preselectedService }) {
     if (isOpen) {
       setCurrentStep(1);
       setIsSuccess(false);
+      setSubmitError('');
       if (preselectedService) {
         setValue('businessCategory', preselectedService);
         // Map logical fallback defaults for custom options
@@ -80,6 +82,7 @@ export default function ServicePopup({ isOpen, onClose, preselectedService }) {
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
+    setSubmitError('');
     try {
       const response = await fetch('/api/leads', {
         method: 'POST',
@@ -88,9 +91,12 @@ export default function ServicePopup({ isOpen, onClose, preselectedService }) {
       });
       if (response.ok) {
         setIsSuccess(true);
+      } else {
+        const result = await response.json().catch(() => ({}));
+        setSubmitError(result.error || 'Something went wrong. Please try again.');
       }
-    } catch (error) {
-      console.error("Submission error:", error);
+    } catch {
+      setSubmitError('Connection error. Please check your internet and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -276,7 +282,13 @@ export default function ServicePopup({ isOpen, onClose, preselectedService }) {
                   )}
                 </AnimatePresence>
 
-                <div className="mt-8 flex justify-between items-center pt-4 border-t border-white/5">
+                {submitError && (
+                  <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                    <span className="mt-0.5 shrink-0">⚠</span>
+                    <span>{submitError}</span>
+                  </div>
+                )}
+                <div className="mt-4 flex justify-between items-center pt-4 border-t border-white/5">
                   {currentStep > 1 ? (
                     <button type="button" onClick={() => setCurrentStep(prev => prev - 1)} className="px-6 py-3 rounded-lg text-slate-400 hover:text-white transition-colors text-sm font-medium">
                       Back

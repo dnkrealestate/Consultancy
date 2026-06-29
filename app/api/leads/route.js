@@ -193,7 +193,7 @@ export async function POST(req) {
 
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
-          to: 'dnkrealestate2022@gmail.com',
+          to: 'dnkconsultants2026@gmail.com',
           subject: `🔥 New Lead: ${name}${service ? ` — ${service}` : ''}`,
           html: `
             <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;max-width:640px;margin:0 auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">

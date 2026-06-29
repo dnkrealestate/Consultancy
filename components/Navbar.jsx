@@ -31,7 +31,7 @@ export default function Navbar() {
   return (
     <header
       className={`border-none outline-none fixed top-0 w-full z-50 transition-all duration-300  ${
-        scrolled ? 'py-3 glass' : 'py-5 bg-transparent'
+        scrolled ? 'py-3 bg-[#021a1a]/60 !backdrop-blur-md' : 'py-5 bg-transparent'
       }`}
     >
       <div className="container mx-auto px-6 md:px-12 flex justify-between items-center border-0">
@@ -83,7 +83,11 @@ export default function Navbar() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-full left-0 w-full glass border-t border-white/10 p-6 md:hidden flex flex-col gap-4"
+            className={`absolute top-full left-0 w-full backdrop-blur-md border-t border-white/10 p-6 md:hidden flex flex-col gap-4 ${
+    scrolled
+      ? 'bg-[#022E35]/99 backdrop-blur-lg'
+      : 'bg-[#022E35]/90 backdrop-blur-lg'
+  }`}
           >
             {navLinks.map((link) => (
               <Link

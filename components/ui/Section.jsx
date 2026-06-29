@@ -17,7 +17,7 @@ export default function Section({
         className
       ))}
     >
-      <div className={twMerge(clsx('container mx-auto px-6 md:px-12 relative z-10', containerClass))}>
+      <div className={twMerge(clsx('mx-auto px-6 md:px-15 xl:px-20 relative z-10', containerClass))}>
         {children}
       </div>
     </section>

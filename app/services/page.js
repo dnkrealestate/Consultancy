@@ -24,7 +24,7 @@ export default function Services() {
     <div className="mx-auto min-h-screen">
 
       {/* Hero */}
-      <section className="relative flex items-center pt-20 overflow-hidden bg-[#021a1a]">
+      <section className="px-6 md:px-15 xl:px-20 relative flex items-center pt-20 overflow-hidden bg-[#021a1a]">
         <div className="absolute inset-0 z-0 hero-bg">
           <div className="absolute top-20 left-10 w-96 h-96 bg-teal-500/20 rounded-full blur-[120px]" />
           <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-teal-600/20 rounded-full blur-[150px]" />

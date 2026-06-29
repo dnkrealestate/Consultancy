@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, FileText, Briefcase,
-  UserCog, Repeat, LogOut, BarChart3,
+  UserCog, Repeat, LogOut, BarChart3, Globe,
 } from 'lucide-react';
 import { canAccessModule, ROLE_LABELS, ROLE_COLORS } from '../../lib/permissions';
 import NotificationBell from '../../components/NotificationBell';
@@ -19,6 +19,7 @@ const NAV = [
   { name: 'Leads CRM',     path: '/admin/leads',    icon: Users,     module: 'leads' },
   { name: 'Services',      path: '/admin/services', icon: Briefcase, module: 'services' },
   { name: 'Blogs',         path: '/admin/blogs',    icon: FileText,  module: 'blogs' },
+  { name: 'SEO',           path: '/admin/seo',      icon: Globe,     module: 'seo' },
   { name: 'Users',         path: '/admin/users',    icon: UserCog,   adminOnly: true },
   { name: 'Lead Rotation', path: '/admin/rotation', icon: Repeat,    adminOnly: true },
   { name: 'Reports',       path: '/admin/reports',  icon: BarChart3, adminOnly: true },

@@ -162,7 +162,7 @@ useEffect(() => {
   return (
     <>
       {/* 1. HERO SECTION */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center pt-20 overflow-hidden bg-[#021a1a]">
+      <section ref={heroRef} className="relative min-h-screen flex items-center pt-20 overflow-hidden bg-[#021a1a] ">
         <div className="absolute inset-0 z-0 hero-bg">
           <div className="absolute top-20 left-10 w-96 h-96 bg-teal-500/20 rounded-full blur-[120px]" />
           <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-teal-600/20 rounded-full blur-[150px]" />
@@ -175,7 +175,7 @@ useEffect(() => {
           />
         </div>
 
-        <div className="container mx-auto px-6 md:px-12 relative z-10 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="mx-auto px-6 md:px-15 xl:px-20 relative z-10 grid lg:grid-cols-2 gap-12 items-center">
           <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: 'easeOut' }}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-teal-500/30 text-teal-300 text-sm mb-6 font-bold shadow-lg shadow-teal-500/10 tracking-wide uppercase">
               <span className="relative flex h-2 w-2">
@@ -229,7 +229,7 @@ useEffect(() => {
             <motion.div
               animate={{ y: [0, -15, 0] }}
               transition={{ repeat: Infinity, duration: 5 }}
-              className="absolute top-10 right-10 w-80 glass-card p-6 z-30"
+              className="absolute top-10 right-10 w-80 glass-card backdrop-blur-md p-6 z-30"
             >
               <div className="w-12 h-12 rounded-full bg-teal-500/20 flex items-center justify-center mb-4 text-teal-400">
                 {slides[activeSlide].icon &&
@@ -290,7 +290,7 @@ useEffect(() => {
             <motion.div
               animate={{ y: [0, 15, 0] }}
               transition={{ repeat: Infinity, duration: 4 }}
-              className="absolute bottom-10 left-0 w-72 glass-card p-6 z-30 border-gold-500/30"
+              className="absolute bottom-10 left-0 w-72 glass-card backdrop-blur-md  p-6 z-30 border-gold-500/30"
             >
               <div className="w-12 h-12 rounded-full bg-gold-500/20 flex items-center justify-center mb-4 text-gold-400">
                 <TrendingUp size={24} />

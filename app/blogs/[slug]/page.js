@@ -3,16 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import {
-  Clock,
-  Share2,
-  Facebook,
-  Twitter,
-  Linkedin as LinkedinIcon,
-  Link as LinkIcon,
-  Loader2,
-  Eye
-} from 'lucide-react';
+import { Clock, Share2, Loader2, Eye } from 'lucide-react';
 import { FaFacebookF, FaTwitter, FaLinkedinIn } from "react-icons/fa";
 import { FiLink } from "react-icons/fi";
 import Section from '../../../components/ui/Section';
@@ -23,7 +14,7 @@ export default function BlogDetail() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [copied, setCopied] = useState(false);
+  const [, setCopied] = useState(false);
 
   // Fetch blog + trigger view tracking
   useEffect(() => {
@@ -75,25 +66,8 @@ export default function BlogDetail() {
     );
   }
 
-  // JSON-LD
-  const schemaData = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: blog.seoMetadata?.title || blog.title,
-    description: blog.seoMetadata?.description || blog.excerpt,
-    datePublished: blog.createdAt,
-    dateModified: blog.updatedAt,
-    author: [{ '@type': 'Organization', name: 'DNK Consultancy' }],
-    image: blog.thumbnail,
-  };
-
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
-      />
-
       {/* Reading Progress Bar */}
       <div
         className="fixed top-0 left-0 h-1 bg-teal-500 z-50 transition-all duration-100"
