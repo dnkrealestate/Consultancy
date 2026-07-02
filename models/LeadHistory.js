@@ -33,6 +33,7 @@ const LeadHistorySchema = new mongoose.Schema(
         'note_added',       // remark / note added
         'follow_up',        // callback / follow-up scheduled
         'field_updated',    // one or more detail fields edited
+        'attended',         // agent marked the lead as attended
       ],
       required: true,
     },

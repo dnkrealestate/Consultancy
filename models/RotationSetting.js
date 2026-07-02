@@ -17,6 +17,10 @@ const RotationSettingSchema = new mongoose.Schema(
 
     // Round-robin pointer — index of the agent who received the last lead.
     lastIndex: { type: Number, default: -1 },
+
+    // Minutes before an unattended assigned lead is reassigned to the next agent.
+    // 0 = feature disabled.
+    nonAttendedTimeoutMinutes: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

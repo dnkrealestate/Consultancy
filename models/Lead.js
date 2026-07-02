@@ -87,6 +87,12 @@ const LeadSchema = new mongoose.Schema(
       type: [AssignmentSchema],
       default: [],
     },
+
+    // ── ATTENDANCE ────────────────────────────────────────
+    // Agent must mark attended; unattended leads can be auto-reassigned after a timeout.
+    attended:   { type: Boolean,   default: false },
+    attendedAt: { type: Date,      default: null  },
+    attendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true }
 );

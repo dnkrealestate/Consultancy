@@ -10,7 +10,6 @@ import {
   Briefcase, Home, Video, Flag, Target, LayoutGrid,
   History, UserCheck, UserMinus, ArrowLeftRight, UserCog,
 } from 'lucide-react';
-import * as ics from 'ics';
 import Button from '../../../components/ui/Button';
 import GlassCard from '../../../components/ui/GlassCard';
 
@@ -40,6 +39,7 @@ const ACTION_META = {
   follow_up:      { label: 'Follow-up set',   color: '#2dd4bf', icon: Calendar },
   field_updated:  { label: 'Details updated', color: '#64748b', icon: FileText },
   closed:         { label: 'Lead closed',     color: '#4ade80', icon: CheckCircle2 },
+  attended:       { label: 'Attended',        color: '#4ade80', icon: CheckCircle2 },
 };
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -48,6 +48,22 @@ function fmt(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     + ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Overdue: agent attended the lead 24+ hours ago but status is still 'New' (no follow-up taken)
+function isOverdueLead(lead) {
+  if (!lead.attended || !lead.attendedAt) return false;
+  if (lead.status !== 'New') return false;
+  return Date.now() - new Date(lead.attendedAt).getTime() > 24 * 60 * 60 * 1000;
+}
+
+function toLocalDateStr(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function toLocalTimeStr(iso) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
 function playNotificationSound() {
@@ -304,10 +320,13 @@ export default function AdminLeads() {
   const [addingNote, setAddingNote]   = useState(false);
   const [noteSuccess, setNoteSuccess] = useState(false);
 
-  const [showCallback, setShowCallback] = useState(false);
-  const [callbackLead, setCallbackLead] = useState(null);
-  const [callbackDate, setCallbackDate] = useState('');
-  const [callbackTime, setCallbackTime] = useState('');
+  const [showCallback, setShowCallback]   = useState(false);
+  const [callbackLead, setCallbackLead]   = useState(null);
+  const [callbackDate, setCallbackDate]   = useState('');
+  const [callbackTime, setCallbackTime]   = useState('');
+  const [callbackSaving, setCallbackSaving]   = useState(false);
+  const [callbackSuccess, setCallbackSuccess] = useState(false);
+  const [callbackError, setCallbackError]     = useState('');
 
   const [selected, setSelected]       = useState(new Set());
   const [showAddLead, setShowAddLead] = useState(false);
@@ -580,27 +599,62 @@ export default function AdminLeads() {
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
-  const scheduleCallback = () => {
-    if (!callbackDate || !callbackTime || !callbackLead) return;
-    const [year, month, day] = callbackDate.split('-').map(Number);
-    const [hours, minutes]   = callbackTime.split(':').map(Number);
-    const notesText = Array.isArray(callbackLead.notes) ? callbackLead.notes.map(n => n.text).join('; ') : '';
-    ics.createEvent({
-      start: [year, month, day, hours, minutes], duration: { hours: 1 },
-      title: `Consultation Call with ${callbackLead.name} (DNK Consultancy)`,
-      description: `Phone: ${callbackLead.phone}\nService: ${callbackLead.service || callbackLead.businessType || ''}\nNotes: ${notesText}`,
-      location: 'Phone Call', status: 'CONFIRMED', busyStatus: 'BUSY',
-      organizer: { name: 'DNK Consultancy', email: 'dnkrealestate2022@gmail.com' },
-      attendees: [{ name: callbackLead.name, email: callbackLead.email, rsvp: true }],
-    }, (err, value) => {
-      if (err) return;
-      const blob = new Blob([value], { type: 'text/calendar;charset=utf-8' });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url; a.setAttribute('download', `callback_${callbackLead.name.replace(/\s+/g, '_')}.ics`);
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    });
-    setShowCallback(false);
+  const handleAttend = async (leadId) => {
+    try {
+      const res = await fetch(`/api/leads/${leadId}/attend`, { method: 'POST' });
+      if (res.ok) {
+        const updated = await res.json();
+        setLeads(prev => prev.map(l => l._id === updated._id ? updated : l));
+        if (selectedLead?._id === updated._id) setSelectedLead(updated);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const openCallback = (lead) => {
+    setCallbackLead(lead);
+    setCallbackDate(lead.callbackDate ? toLocalDateStr(lead.callbackDate) : '');
+    setCallbackTime(lead.callbackDate ? toLocalTimeStr(lead.callbackDate) : '09:00');
+    setCallbackSaving(false); setCallbackSuccess(false); setCallbackError('');
+    setShowCallback(true);
+  };
+
+  const scheduleCallback = async () => {
+    if (!callbackDate || !callbackLead) return;
+    setCallbackSaving(true); setCallbackError('');
+    const combined = new Date(`${callbackDate}T${callbackTime || '09:00'}`);
+    try {
+      const res = await fetch(`/api/leads/${callbackLead._id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callbackDate: combined.toISOString() }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setLeads(prev => prev.map(l => l._id === updated._id ? updated : l));
+        if (selectedLead?._id === updated._id) setSelectedLead(updated);
+        setCallbackSuccess(true);
+        setTimeout(() => {
+          setShowCallback(false); setCallbackSuccess(false);
+          setCallbackLead(null); setCallbackDate(''); setCallbackTime('09:00');
+        }, 1100);
+      } else { setCallbackError('Failed to save. Please try again.'); }
+    } catch { setCallbackError('Network error.'); }
+    finally { setCallbackSaving(false); }
+  };
+
+  const removeCallbackDate = async () => {
+    if (!callbackLead || !window.confirm(`Remove scheduled callback for ${callbackLead.name}?`)) return;
+    try {
+      const res = await fetch(`/api/leads/${callbackLead._id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callbackDate: null }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setLeads(prev => prev.map(l => l._id === updated._id ? updated : l));
+        if (selectedLead?._id === updated._id) setSelectedLead(updated);
+        setShowCallback(false); setCallbackLead(null);
+      }
+    } catch { /* ignore */ }
   };
 
   // ── Filters
@@ -612,13 +666,14 @@ export default function AdminLeads() {
       || l.companyName?.toLowerCase().includes(q)
       || l.service?.toLowerCase().includes(q)
       || l.businessActivity?.toLowerCase().includes(q);
-    const matchStatus = filterStatus === 'All' || l.status === filterStatus;
+    const matchStatus = filterStatus === 'All' || (filterStatus === 'Overdue' ? isOverdueLead(l) : l.status === filterStatus);
     const matchBiz    = filterBizType === 'All Types' || l.businessType === filterBizType;
     const matchInvest = filterInvest === 'All Ranges' || l.investmentRange === filterInvest;
     return matchSearch && matchStatus && matchBiz && matchInvest;
   });
 
   const counts = leads.reduce((acc, l) => { acc[l.status] = (acc[l.status] || 0) + 1; return acc; }, {});
+  const overdueCount = leads.filter(isOverdueLead).length;
 
   // ── Role-derived UI flags ──
   const isAdmin            = me?.role === 'admin';
@@ -682,6 +737,9 @@ export default function AdminLeads() {
           <StatCard label="Contacted" value={counts.Contacted || 0}  icon={Phone}      color="#fbbf24" bg="rgba(251,191,36,0.12)"  />
           <StatCard label="Qualified" value={counts.Qualified || 0}  icon={Star}       color="#c084fc" bg="rgba(192,132,252,0.12)" />
           <StatCard label="Closed"    value={counts.Closed || 0}     icon={TrendingUp} color="#4ade80" bg="rgba(74,222,128,0.12)"  />
+          {overdueCount > 0 && (
+            <StatCard label="Overdue" value={overdueCount} icon={AlertCircle} color="#f97316" bg="rgba(249,115,22,0.12)" />
+          )}
         </div>
 
         {/* FILTERS */}
@@ -691,6 +749,9 @@ export default function AdminLeads() {
           {Object.entries(STATUS_CFG).map(([s, cfg]) => (
             <FilterChip key={s} label={s} value={counts[s] || 0} active={filterStatus === s} onClick={() => setFilterStatus(s)} color={cfg.dot} />
           ))}
+          {overdueCount > 0 && (
+            <FilterChip label="⚠ Overdue" value={overdueCount} active={filterStatus === 'Overdue'} onClick={() => setFilterStatus('Overdue')} color="#f97316" />
+          )}
           <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
           <select value={filterBizType} onChange={e => setFilterBizType(e.target.value)} style={{ background: filterBizType !== 'All Types' ? 'rgba(20,184,166,0.12)' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (filterBizType !== 'All Types' ? 'rgba(20,184,166,0.35)' : 'rgba(255,255,255,0.08)'), borderRadius: 20, padding: '6px 14px', fontSize: 12, fontWeight: 600, color: filterBizType !== 'All Types' ? '#2dd4bf' : '#64748b', cursor: 'pointer', outline: 'none' }}>
             {BUSINESS_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
@@ -739,9 +800,9 @@ export default function AdminLeads() {
                   const isSel = selected.has(lead._id);
                   return (
                     <tr key={lead._id}
-                      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: isSel ? 'rgba(20,184,166,0.06)' : selectedLead?._id === lead._id ? 'rgba(20,184,166,0.04)' : 'transparent', transition: 'background 0.15s', cursor: 'pointer' }}
-                      onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = isSel ? 'rgba(20,184,166,0.06)' : selectedLead?._id === lead._id ? 'rgba(20,184,166,0.04)' : 'transparent'; }}
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: isSel ? 'rgba(20,184,166,0.06)' : selectedLead?._id === lead._id ? 'rgba(20,184,166,0.04)' : isOverdueLead(lead) ? 'rgba(249,115,22,0.05)' : 'transparent', transition: 'background 0.15s', cursor: 'pointer' }}
+                      onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = isOverdueLead(lead) ? 'rgba(249,115,22,0.09)' : 'rgba(255,255,255,0.03)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = isSel ? 'rgba(20,184,166,0.06)' : selectedLead?._id === lead._id ? 'rgba(20,184,166,0.04)' : isOverdueLead(lead) ? 'rgba(249,115,22,0.05)' : 'transparent'; }}
                       onClick={() => openDetail(lead)}
                     >
                       <td style={{ padding: '14px 16px' }} onClick={e => { e.stopPropagation(); toggleSelect(lead._id); }}>
@@ -757,7 +818,16 @@ export default function AdminLeads() {
                           </div>
                           <div>
                             <div style={{ color: 'white', fontWeight: 600, fontSize: 14 }}>{lead.name}</div>
-                            <div style={{ color: '#475569', fontSize: 11 }}>{lead.nationality || new Date(lead.createdAt).toLocaleDateString()}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                              <div style={{ color: '#475569', fontSize: 11 }}>{lead.nationality || new Date(lead.createdAt).toLocaleDateString()}</div>
+                              {lead.assignedTo && (
+                                isOverdueLead(lead)
+                                  ? <span style={{ fontSize: 10, fontWeight: 700, color: '#f97316', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 20, padding: '1px 7px' }}>⚠ Overdue</span>
+                                  : lead.attended
+                                    ? <span style={{ fontSize: 10, fontWeight: 700, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: 20, padding: '1px 7px' }}>✓ Attended</span>
+                                    : <span style={{ fontSize: 10, fontWeight: 700, color: '#fbbf24', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 20, padding: '1px 7px' }}>⏳ Pending</span>
+                              )}
+                            </div>
                           </div>
                           <ChevronRight size={13} style={{ color: '#334155' }} />
                         </div>
@@ -807,9 +877,19 @@ export default function AdminLeads() {
                       {/* Actions */}
                       <td style={{ padding: '14px 16px' }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => { setCallbackLead(lead); setShowCallback(true); }}
-                            style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(20,184,166,0.12)', border: '1px solid rgba(20,184,166,0.2)', color: '#2dd4bf', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                            title="Schedule Callback"><Calendar size={14} /></button>
+                          {/* Attend button */}
+                          {lead.attended ? (
+                            <button disabled style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'default' }} title={`Attended${lead.attendedAt ? ' · ' + new Date(lead.attendedAt).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : ''}`}>
+                              <CheckCircle2 size={14} />
+                            </button>
+                          ) : lead.assignedTo && (me?.role === 'admin' || me?.role === 'back_office' || String(lead.assignedTo?._id ?? lead.assignedTo) === String(me?._id)) ? (
+                            <button onClick={() => handleAttend(lead._id)} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Mark as Attended">
+                              <UserCheck size={14} />
+                            </button>
+                          ) : null}
+                          <button onClick={() => openCallback(lead)}
+                            style={{ width: 32, height: 32, borderRadius: 8, background: lead.callbackDate ? 'rgba(20,184,166,0.22)' : 'rgba(20,184,166,0.08)', border: lead.callbackDate ? '1px solid rgba(20,184,166,0.5)' : '1px solid rgba(20,184,166,0.2)', color: lead.callbackDate ? '#2dd4bf' : '#0d9488', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                            title={lead.callbackDate ? `Callback: ${toLocalDateStr(lead.callbackDate)} ${toLocalTimeStr(lead.callbackDate)} — click to edit` : 'Schedule Callback'}><Calendar size={14} /></button>
                           <button onClick={() => openDetail(lead)}
                             style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                             title="View Details"><FileText size={14} /></button>
@@ -864,8 +944,26 @@ export default function AdminLeads() {
               <div style={{ padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: sc.bg, color: sc.color, border: `1px solid ${sc.border}`, flexShrink: 0 }}>
                 {editForm.status}
               </div>
-              <button onClick={() => { setCallbackLead(selectedLead); setShowCallback(true); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, background: 'rgba(20,184,166,0.12)', color: '#2dd4bf', border: '1px solid rgba(20,184,166,0.25)', fontSize: 13, cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}>
-                <Phone size={13} /> Callback
+              {/* Attended / Overdue badge / button */}
+              {selectedLead.attended ? (
+                isOverdueLead(selectedLead) ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.35)', color: '#f97316', fontSize: 12, fontWeight: 700, flexShrink: 0 }}
+                    title={`Attended ${new Date(selectedLead.attendedAt).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })} — no follow-up in 24 h`}>
+                    <AlertCircle size={13} /> Overdue
+                  </div>
+                ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ade80', fontSize: 12, fontWeight: 700, flexShrink: 0 }}
+                  title={selectedLead.attendedAt ? `Attended at ${new Date(selectedLead.attendedAt).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}` : ''}>
+                  <CheckCircle2 size={13} /> Attended
+                </div>
+                )
+              ) : selectedLead.assignedTo && (me?.role === 'admin' || me?.role === 'back_office' || String(selectedLead.assignedTo?._id ?? selectedLead.assignedTo) === String(me?._id)) ? (
+                <button onClick={() => handleAttend(selectedLead._id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, background: 'rgba(251,191,36,0.1)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', fontSize: 13, cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}>
+                  <UserCheck size={13} /> Mark Attended
+                </button>
+              ) : null}
+              <button onClick={() => openCallback(selectedLead)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, background: selectedLead.callbackDate ? 'rgba(20,184,166,0.22)' : 'rgba(20,184,166,0.12)', color: '#2dd4bf', border: selectedLead.callbackDate ? '1px solid rgba(20,184,166,0.5)' : '1px solid rgba(20,184,166,0.25)', fontSize: 13, cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}>
+                <Phone size={13} /> {selectedLead.callbackDate ? 'Edit Callback' : 'Callback'}
               </button>
               <button onClick={closeDetail} style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={17} />
@@ -1113,26 +1211,58 @@ export default function AdminLeads() {
 
       {/* CALLBACK MODAL */}
       {showCallback && callbackLead && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'linear-gradient(160deg,#0d2226,#091a1e)', border: '1px solid rgba(20,184,166,0.25)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 420, boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
-            <h3 style={{ color: 'white', fontWeight: 800, fontSize: 20, margin: '0 0 8px' }}>Schedule Callback</h3>
-            <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 24px' }}>
-              Schedule a call with <span style={{ color: '#2dd4bf' }}>{callbackLead.name}</span>. Downloads a .ics calendar file.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
-              <div>
-                <label style={{ display: 'block', color: '#64748b', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>Date</label>
-                <input type="date" value={callbackDate} onChange={e => setCallbackDate(e.target.value)} style={{ width: '100%', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: 'white', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setShowCallback(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'linear-gradient(160deg,#0d2226,#091a1e)', border: '1px solid rgba(20,184,166,0.25)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 420, boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 13, background: 'rgba(20,184,166,0.15)', border: '1px solid rgba(20,184,166,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 800, color: '#2dd4bf', flexShrink: 0 }}>
+                {callbackLead.name[0]?.toUpperCase()}
               </div>
               <div>
-                <label style={{ display: 'block', color: '#64748b', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>Time</label>
-                <input type="time" value={callbackTime} onChange={e => setCallbackTime(e.target.value)} style={{ width: '100%', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: 'white', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                <div style={{ color: 'white', fontWeight: 800, fontSize: 17 }}>{callbackLead.callbackDate ? 'Edit Callback' : 'Schedule Callback'}</div>
+                <div style={{ color: '#475569', fontSize: 12, marginTop: 2 }}>{callbackLead.name}{callbackLead.phone ? ` · ${callbackLead.phone}` : ''}</div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
+
+            {/* Existing callback banner */}
+            {callbackLead.callbackDate && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', background: 'rgba(20,184,166,0.08)', border: '1px solid rgba(20,184,166,0.2)', borderRadius: 10, marginBottom: 18 }}>
+                <Clock size={13} style={{ color: '#2dd4bf', flexShrink: 0 }} />
+                <div style={{ color: '#64748b', fontSize: 11, fontWeight: 600 }}>
+                  Currently: <span style={{ color: '#2dd4bf' }}>{toLocalDateStr(callbackLead.callbackDate)} · {toLocalTimeStr(callbackLead.callbackDate)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Inputs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+              <div>
+                <label style={{ display: 'block', color: '#64748b', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>Date</label>
+                <input type="date" value={callbackDate} onChange={e => setCallbackDate(e.target.value)} style={{ width: '100%', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: 'white', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#64748b', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>Time</label>
+                <input type="time" value={callbackTime} onChange={e => setCallbackTime(e.target.value)} style={{ width: '100%', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: 'white', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+              </div>
+            </div>
+
+            {callbackError && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, marginBottom: 16, color: '#f87171', fontSize: 13 }}>
+                ⚠ {callbackError}
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              {callbackLead.callbackDate && (
+                <button onClick={removeCallbackDate} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 14px', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                  <Trash2 size={13} /> Remove
+                </button>
+              )}
               <button onClick={() => setShowCallback(false)} style={{ flex: 1, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={scheduleCallback} style={{ flex: 2, padding: 12, borderRadius: 12, background: 'linear-gradient(135deg,#0f766e,#0d9488)', border: 'none', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <Calendar size={15} /> Generate .ICS
+              <button onClick={scheduleCallback} disabled={!callbackDate || callbackSaving} style={{ flex: 2, padding: 12, borderRadius: 12, border: 'none', color: !callbackDate ? '#475569' : 'white', fontSize: 14, fontWeight: 700, cursor: (!callbackDate || callbackSaving) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: callbackSuccess ? 'linear-gradient(135deg,#166534,#15803d)' : !callbackDate ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#0f766e,#0d9488)', opacity: callbackSaving ? 0.75 : 1 }}>
+                {callbackSaving ? <><Spinner /> Saving…</> : callbackSuccess ? <><CheckCircle2 size={15} /> Saved!</> : <><Calendar size={15} /> Save Callback</>}
               </button>
             </div>
           </div>

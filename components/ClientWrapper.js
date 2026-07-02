@@ -7,7 +7,7 @@ import Footer from './Footer';
 export default function ClientWrapper({ children }) {
   const pathname = usePathname();
   const isSchedule = pathname?.startsWith("/schedule");
-  const isAdmin = pathname?.startsWith("/admin");
+  const isAdmin = pathname?.startsWith("/crm");
 
   return (
     <>

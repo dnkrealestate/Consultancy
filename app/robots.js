@@ -3,7 +3,7 @@ export default function robots() {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin/', '/api/'],
+      disallow: ['/crm/', '/api/'],
     },
     sitemap: 'https://www.dnkconsultancy.com/sitemap.xml',
   };

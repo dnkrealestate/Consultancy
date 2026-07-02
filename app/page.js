@@ -268,18 +268,18 @@ useEffect(() => {
 
                   {/* Character Floating */}
                   <motion.div
-                    animate={{ y: [0, 20, 0] }}
+                    animate={{ y: [0, 10, 0] }}
                     transition={{
                       repeat: Infinity,
                       duration: 5,
                       ease: 'easeInOut',
                     }}
-                    className="absolute left-0 bottom-0 inset-20 z-10"
+                    className="absolute !left-0 !bottom-0 inset-20 z-10"
                   >
                     <Image
                       src={slides[activeSlide].char}
                       alt="Character"
-                      className="opacity-0 xl:opacity-100 object-contain p-10 xl:p-16 w-[50%]"
+                      className="opacity-0 xl:opacity-100 object-contain p-10 xl:p-12 !pb-0 w-[50%]"
                     />
                   </motion.div>
                 </motion.div>

@@ -130,7 +130,7 @@ export default function NotificationBell() {
       try { await fetch('/api/notifications', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: n._id }) }); } catch { /* ignore */ }
     }
     setOpen(false);
-    router.push('/admin/leads');
+    router.push('/crm/leads');
   };
 
   const badge = unread + followUps.length;
@@ -169,7 +169,7 @@ export default function NotificationBell() {
                 <CalendarClock size={12} /> Follow-ups due today
               </div>
               {followUps.map((f) => (
-                <button key={f._id} onClick={() => { setOpen(false); router.push('/admin/leads'); }} style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', marginBottom: 6, borderRadius: 10, background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.18)', cursor: 'pointer' }}>
+                <button key={f._id} onClick={() => { setOpen(false); router.push('/crm/leads'); }} style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', marginBottom: 6, borderRadius: 10, background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.18)', cursor: 'pointer' }}>
                   <CalendarClock size={15} style={{ color: '#fbbf24', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ color: 'white', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>

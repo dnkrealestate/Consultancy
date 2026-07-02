@@ -24,7 +24,7 @@ export default function AdminLogin() {
       const data = await res.json();
       
       if (res.ok) {
-        router.push('/admin');
+        router.push('/crm');
         router.refresh();
       } else {
         setError(data.error || 'Login failed');

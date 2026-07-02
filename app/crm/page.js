@@ -120,8 +120,8 @@ export default function AdminDashboard() {
   // ── Content-only roles with no lead access: show a modules landing ──
   if (noLeadAccess) {
     const tiles = [
-      { key: 'blogs', label: 'Blogs', desc: 'Write and manage blog posts', icon: FileText, path: '/admin/blogs' },
-      { key: 'services', label: 'Services', desc: 'Manage service content', icon: Briefcase, path: '/admin/services' },
+      { key: 'blogs', label: 'Blogs', desc: 'Write and manage blog posts', icon: FileText, path: '/crm/blogs' },
+      { key: 'services', label: 'Services', desc: 'Manage service content', icon: Briefcase, path: '/crm/services' },
     ].filter((t) => canAccessModule(user, t.key));
 
     return (
@@ -227,13 +227,13 @@ export default function AdminDashboard() {
       {/* ADMIN QUICK LINKS */}
       {isAdmin && (
         <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
-          <a href="/admin/users" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', color: '#cbd5e1', fontSize: 13, fontWeight: 600 }}>
+          <a href="/crm/users" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', color: '#cbd5e1', fontSize: 13, fontWeight: 600 }}>
             <UserCog size={16} style={{ color: '#a855f7' }} /> Manage Users <ChevronRight size={14} style={{ color: '#475569' }} />
           </a>
-          <a href="/admin/rotation" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', color: '#cbd5e1', fontSize: 13, fontWeight: 600 }}>
+          <a href="/crm/rotation" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', color: '#cbd5e1', fontSize: 13, fontWeight: 600 }}>
             <Repeat size={16} style={{ color: '#2dd4bf' }} /> Lead Rotation <ChevronRight size={14} style={{ color: '#475569' }} />
           </a>
-          <a href="/admin/reports" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', color: '#cbd5e1', fontSize: 13, fontWeight: 600 }}>
+          <a href="/crm/reports" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', color: '#cbd5e1', fontSize: 13, fontWeight: 600 }}>
             <Award size={16} style={{ color: '#fbbf24' }} /> Reports <ChevronRight size={14} style={{ color: '#475569' }} />
           </a>
         </div>
@@ -347,7 +347,7 @@ export default function AdminDashboard() {
       <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, padding: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div style={{ color: 'white', fontSize: 15, fontWeight: 800 }}>{isAgent ? 'My Recent Leads' : 'Recent Leads'}</div>
-          <a href="/admin/leads" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#14b8a6', textDecoration: 'none' }}>View all <ChevronRight size={13} /></a>
+          <a href="/crm/leads" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#14b8a6', textDecoration: 'none' }}>View all <ChevronRight size={13} /></a>
         </div>
         {recent.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#334155', fontSize: 14 }}>No leads yet</div>

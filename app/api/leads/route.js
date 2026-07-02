@@ -8,6 +8,7 @@ import { getAuthUser } from '@/lib/auth';
 import { canAccessModule, canSeeAllLeads } from '@/lib/permissions';
 import { assignViaRotation } from '@/lib/rotation';
 import { logHistory } from '@/lib/history';
+import { sendPushToAll } from '@/lib/push';
 
 // GET /api/leads
 // Role-scoped: agents see only the leads assigned to them; admin and
@@ -163,6 +164,17 @@ export async function POST(req) {
         meta: { method: assignMethod },
       });
     }
+
+    // Push notification to all subscribed admins/agents
+    sendPushToAll({
+      title: '🔥 New Lead',
+      body: `${lead.name}${lead.service ? ` · ${lead.service}` : ''}`,
+      icon: '/logo.png',
+      badge: '/logo.png',
+      tag: `new-lead-${lead._id}`,
+      url: '/crm/leads',
+      requireInteraction: true,
+    }).catch(() => { /* non-critical — don't block the response */ });
 
     console.log("LEAD SUCCESSFULLY STORED:", lead);
 

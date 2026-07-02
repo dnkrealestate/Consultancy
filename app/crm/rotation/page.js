@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Repeat, Shield, Users, CheckCircle2, Save, Info, ArrowRight, Zap,
+  Repeat, Shield, Users, CheckCircle2, Save, Info, ArrowRight, Zap, Clock,
 } from 'lucide-react';
 
 function Spinner({ size = 14, color = 'white' }) {
@@ -16,9 +16,12 @@ export default function LeadRotation() {
   const [savedFlash, setSavedFlash] = useState(false);
 
   const [enabled, setEnabled] = useState(false);
-  const [pool, setPool] = useState([]);          // ordered array of agent ids
+  const [pool, setPool] = useState([]);
   const [lastIndex, setLastIndex] = useState(-1);
-  const [agents, setAgents] = useState([]);       // all agents (for the picker)
+  const [agents, setAgents] = useState([]);
+  const [timeout, setTimeout_]       = useState(0); // nonAttendedTimeoutMinutes
+  const [timeoutSaving, setTimeoutSaving] = useState(false);
+  const [timeoutSaved,  setTimeoutSaved]  = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -28,8 +31,8 @@ export default function LeadRotation() {
         if (d.user.role !== 'admin') { setDenied(true); setLoading(false); return; }
       }
       const [rotRes, agentsRes] = await Promise.all([
-        fetch('/api/rotation'),
-        fetch('/api/users?role=agent'),
+        fetch('/api/rotation', { cache: 'no-store' }),
+        fetch('/api/users?role=agent', { cache: 'no-store' }),
       ]);
       if (rotRes.status === 403) { setDenied(true); setLoading(false); return; }
       if (rotRes.ok) {
@@ -37,6 +40,7 @@ export default function LeadRotation() {
         setEnabled(rot.enabled);
         setLastIndex(typeof rot.lastIndex === 'number' ? rot.lastIndex : -1);
         setPool((rot.agents || []).map((a) => String(a._id)));
+        setTimeout_(rot.nonAttendedTimeoutMinutes ?? 0);
       }
       if (agentsRes.ok) setAgents(await agentsRes.json());
     } catch (e) { console.error(e); }
@@ -51,19 +55,39 @@ export default function LeadRotation() {
       ? prev.filter((x) => x !== id)
       : agents.map((a) => String(a._id)).filter((x) => prev.includes(x) || x === id)));
 
+  // Saves ONLY the timeout — called immediately when a timeout button is clicked
+  // so the user never needs to remember to hit "Save Settings" for this field.
+  const saveTimeout = async (value) => {
+    setTimeout_(value);
+    setTimeoutSaving(true);
+    try {
+      const res = await fetch('/api/rotation', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nonAttendedTimeoutMinutes: value }),
+      });
+      if (res.ok) {
+        setTimeoutSaved(true);
+        setTimeout(() => setTimeoutSaved(false), 2000);
+      }
+    } catch (e) { console.error(e); }
+    finally { setTimeoutSaving(false); }
+  };
+
   const save = async () => {
     setSaving(true);
     try {
       const res = await fetch('/api/rotation', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled, agents: pool }),
+        body: JSON.stringify({ enabled, agents: pool, nonAttendedTimeoutMinutes: timeout }),
       });
       if (res.ok) {
         const rot = await res.json();
         setEnabled(rot.enabled);
         setLastIndex(typeof rot.lastIndex === 'number' ? rot.lastIndex : -1);
         setPool((rot.agents || []).map((a) => String(a._id)));
+        setTimeout_(rot.nonAttendedTimeoutMinutes ?? 0);
         setSavedFlash(true);
         setTimeout(() => setSavedFlash(false), 2200);
       }
@@ -179,11 +203,65 @@ export default function LeadRotation() {
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-          <button onClick={save} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 10, fontWeight: 700, fontSize: 14, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', color: 'white', background: savedFlash ? 'linear-gradient(135deg,#166534,#15803d)' : 'linear-gradient(135deg,#0f766e,#0d9488)', opacity: saving ? 0.75 : 1, boxShadow: '0 4px 20px rgba(13,148,136,0.25)' }}>
-            {saving ? <><Spinner /> Saving…</> : savedFlash ? <><CheckCircle2 size={16} /> Saved!</> : <><Save size={15} /> Save Settings</>}
-          </button>
+      </div>
+
+      {/* NON-ATTENDED TIMEOUT */}
+      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, padding: 24, marginTop: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <Clock size={16} style={{ color: '#fbbf24' }} />
+          <h3 style={{ color: 'white', fontWeight: 800, fontSize: 15, margin: 0 }}>Non-Attended Lead Timeout</h3>
+          {timeoutSaving && (
+            <span style={{ marginLeft: 8, fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Spinner size={10} color="#94a3b8" /> Saving…
+            </span>
+          )}
+          {!timeoutSaving && timeoutSaved && (
+            <span style={{ marginLeft: 8, fontSize: 11, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <CheckCircle2 size={11} /> Saved
+            </span>
+          )}
         </div>
+        <p style={{ color: '#475569', fontSize: 12, margin: '0 0 20px' }}>
+          If an agent doesn't mark a lead as <strong style={{ color: '#94a3b8' }}>Attended</strong> within the set time, the lead is automatically reassigned to the next agent in the pool.
+          Set to <strong style={{ color: '#94a3b8' }}>Disabled</strong> to turn this off.
+        </p>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {[
+            { label: 'Disabled', value: 0 },
+            { label: '10 min',   value: 10 },
+            { label: '15 min',   value: 15 },
+            { label: '20 min',   value: 20 },
+            { label: '30 min',   value: 30 },
+            { label: '45 min',   value: 45 },
+            { label: '60 min',   value: 60 },
+          ].map(({ label, value }) => {
+            const active = timeout === value;
+            return (
+              <button key={value} onClick={() => saveTimeout(value)}
+                style={{ padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer', border: `1px solid ${active ? 'rgba(251,191,36,0.5)' : 'rgba(255,255,255,0.08)'}`, background: active ? 'rgba(251,191,36,0.12)' : 'rgba(0,0,0,0.2)', color: active ? '#fbbf24' : '#64748b', transition: 'all 0.15s' }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {timeout > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, padding: '10px 14px', background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 12 }}>
+            <Info size={13} style={{ color: '#fbbf24', flexShrink: 0 }} />
+            <span style={{ color: '#94a3b8', fontSize: 12 }}>
+              Unattended leads assigned to an agent for more than <strong style={{ color: '#fbbf24' }}>{timeout} minutes</strong> will be reassigned automatically.
+              Requires at least 2 agents in the pool.
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* SAVE — covers all settings above */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+        <button onClick={save} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 28px', borderRadius: 10, fontWeight: 700, fontSize: 14, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', color: 'white', background: savedFlash ? 'linear-gradient(135deg,#166534,#15803d)' : 'linear-gradient(135deg,#0f766e,#0d9488)', opacity: saving ? 0.75 : 1, boxShadow: '0 4px 20px rgba(13,148,136,0.25)' }}>
+          {saving ? <><Spinner /> Saving…</> : savedFlash ? <><CheckCircle2 size={16} /> Saved!</> : <><Save size={15} /> Save Settings</>}
+        </button>
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

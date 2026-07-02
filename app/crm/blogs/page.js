@@ -83,15 +83,16 @@ function BlogFormModal({ blog, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/80 backdrop-blur-sm overflow-y-auto py-8 px-4">
-      <div className="bg-[#071e1e] border border-white/10 rounded-2xl w-full max-w-3xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 py-5 border-b border-white/10">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8">
+      <div className="bg-[#071e1e] border border-white/10 rounded-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: '90vh' }}>
+        {/* Header — always visible */}
+        <div className="flex items-center justify-between px-8 py-5 border-b border-white/10 flex-shrink-0">
           <h2 className="text-xl font-bold text-white">{isEdit ? 'Edit Article' : 'New Article'}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition"><X size={22} /></button>
         </div>
 
-        <div className="px-8 py-6 space-y-6">
+        {/* Scrollable form body */}
+        <div className="px-8 py-6 space-y-6 overflow-y-auto flex-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(20,184,166,0.3) transparent' }}>
           {error && (
             <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl text-sm">
               <AlertCircle size={16} /> {error}
