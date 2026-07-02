@@ -4,6 +4,7 @@ import Lead from '@/models/Lead';
 import { getAuthUser } from '@/lib/auth';
 import { logHistory } from '@/lib/history';
 
+
 // POST /api/leads/:id/attend — mark lead as attended by the current agent
 export async function POST(req, { params }) {
   try {
